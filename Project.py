@@ -1,11 +1,48 @@
 import random
+import mysql.connector
 
+# Connect to MySQL database
+def connect_to_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="your_username",  # Replace with your MySQL username
+        password="your_password",  # Replace with your MySQL password
+        database="minesweeper_game"
+    )
+
+# Fetch or create a player record
+def get_or_create_player(name):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT balance FROM players WHERE name = %s", (name,))
+    result = cursor.fetchone()
+
+    if result:
+        balance = result[0]
+    else:
+        balance = 0
+        cursor.execute("INSERT INTO players (name, balance) VALUES (%s, %s)", (name, balance))
+        conn.commit()
+
+    conn.close()
+    return balance
+
+# Update player balance
+def update_balance(name, balance):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE players SET balance = %s WHERE name = %s", (balance, name))
+    conn.commit()
+    conn.close()
+
+# Deposit function
 def deposit(balance):
     amount = int(input("Enter the amount to deposit: "))
     balance += amount
     print("You have successfully deposited", amount, "Your new balance is", balance)
     return balance
 
+# Withdraw function
 def withdraw(balance):
     while True:
         amount = int(input("Enter the amount to withdraw: "))
@@ -16,6 +53,7 @@ def withdraw(balance):
             print("You have successfully withdrawn", amount, "Your new balance is", balance)
             return balance
 
+# Play game function
 def play_game(balance):
     if balance <= 0:
         print("Insufficient balance to play. Please deposit money first.")
@@ -103,11 +141,11 @@ def play_game(balance):
 
     return balance
 
+# Main function
 def main():
-    balance = 0
-
     print("Welcome to the Ultimate Minesweeper Game!")
-    print("Your adventure begins now!\n")
+    name = input("Enter your name: ")
+    balance = get_or_create_player(name)
 
     while True:
         print("Choose an option:")
@@ -120,12 +158,16 @@ def main():
 
         if choice == '1':
             balance = deposit(balance)
+            update_balance(name, balance)
         elif choice == '2':
             balance = withdraw(balance)
+            update_balance(name, balance)
         elif choice == '3':
             balance = play_game(balance)
+            update_balance(name, balance)
         elif choice == '4':
             print("Thank you for playing! Goodbye!")
+            update_balance(name, balance)
             break
         else:
             print("Invalid choice. Please try again.")
