@@ -8,7 +8,7 @@ conn = mysql.connector.connect(host="localhost", user="root", password="SQL1234"
 cursor = conn.cursor()
 
 def check_user_balance(name):
-    cursor.execute("SELECT Balance FROM Data WHERE Name = '" + name + "'") 
+    cursor.execute("SELECT Balance FROM Data WHERE Name = %s", (name,)) 
     result = cursor.fetchone()
     if result:
         return result[0]
@@ -16,17 +16,17 @@ def check_user_balance(name):
         return None
 
 def update_user_balance(name, balance):
-    cursor.execute("UPDATE Data SET Balance = " + str(balance) + " WHERE Name = '" + name + "'")
+    cursor.execute("UPDATE Data SET Balance = %s WHERE Name = %s", (balance, name))
     conn.commit()
 
 def create_user(name):
-    cursor.execute("INSERT INTO Data (Name, Balance) VALUES ('" + name + "', 0)")
+    cursor.execute("INSERT INTO Data (Name, Balance) VALUES (%s, 0)", (name,))
     conn.commit()
 
 def deposit(balance):
     amount = int(input("Enter the amount to deposit: "))
     balance += amount
-    print(f"₹{amount} deposited. New balance: ₹{balance}")
+    print("₹", amount, " deposited. New balance: ₹", balance) 
     return balance
 
 def withdraw(balance):
@@ -35,7 +35,7 @@ def withdraw(balance):
         print("Insufficient balance.")
     else:
         balance -= amount
-        print(f"₹{amount} withdrawn. New balance: ₹{balance}")
+        print("₹", amount, " withdrawn. New balance: ₹", balance) 
     return balance
 
 def play_game(balance):
@@ -96,7 +96,7 @@ def play_game(balance):
                 R[y - 13] = '💣'
             display_board()
 
-            print(f"You lost {bet}! Remaining balance: {balance}")
+            print("You lost ₹", bet, "! Remaining balance: ₹", balance) 
             update_user_balance(name, balance)
             break
         else:
@@ -113,8 +113,8 @@ def play_game(balance):
 
             display_board()
 
-            bet *=2   # Increase bet only if the player survives
-            print(f"Winnings = {int(bet)}")
+            bet *= 2  # Increase bet only if the player survives
+            print("Winnings = ₹", int(bet)) 
 
             while True:
                 choice = input("Do you want to continue playing or exit? (continue/exit): ").lower()
@@ -122,7 +122,7 @@ def play_game(balance):
                     break
                 elif choice == "exit":
                     balance += bet
-                    print(f"You have exited the game with {int(bet)} added to your balance. Your new balance is {balance}")
+                    print("You have exited the game with ₹", int(bet), " added to your balance. Your new balance is ₹", balance) 
                     update_user_balance(name, balance)
                     return balance
                 else:
