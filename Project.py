@@ -1,74 +1,59 @@
 import random
 import mysql.connector
 
-# Connect to MySQL database
-def connect_to_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="your_username",  # Replace with your MySQL username
-        password="your_password",  # Replace with your MySQL password
-        database="minesweeper_game"
-    )
+print("Welcome to the Ultimate Minesweeper Game!")
+print("Your adventure begins now!\n")
 
-# Fetch or create a player record
-def get_or_create_player(name):
-    conn = connect_to_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance FROM players WHERE name = %s", (name,))
+conn = mysql.connector.connect(host="localhost", user="root", password="SQL1234", database="Minesweeper")
+cursor = conn.cursor()
+
+def check_user_balance(name):
+    cursor.execute("SELECT Balance FROM Data WHERE Name = '" + name + "'") 
     result = cursor.fetchone()
-
     if result:
-        balance = result[0]
+        return result[0]
     else:
-        balance = 0
-        cursor.execute("INSERT INTO players (name, balance) VALUES (%s, %s)", (name, balance))
-        conn.commit()
+        return None
 
-    conn.close()
-    return balance
-
-# Update player balance
-def update_balance(name, balance):
-    conn = connect_to_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE players SET balance = %s WHERE name = %s", (balance, name))
+def update_user_balance(name, balance):
+    cursor.execute("UPDATE Data SET Balance = " + str(balance) + " WHERE Name = '" + name + "'")
     conn.commit()
-    conn.close()
 
-# Deposit function
+def create_user(name):
+    cursor.execute("INSERT INTO Data (Name, Balance) VALUES ('" + name + "', 0)")
+    conn.commit()
+
 def deposit(balance):
     amount = int(input("Enter the amount to deposit: "))
     balance += amount
-    print("You have successfully deposited", amount, "Your new balance is", balance)
+    print(f"₹{amount} deposited. New balance: ₹{balance}")
     return balance
 
-# Withdraw function
 def withdraw(balance):
-    while True:
-        amount = int(input("Enter the amount to withdraw: "))
-        if amount > balance:
-            print("Insufficient balance. Please enter a smaller amount.")
-        else:
-            balance -= amount
-            print("You have successfully withdrawn", amount, "Your new balance is", balance)
-            return balance
+    amount = int(input("Enter the amount to withdraw: "))
+    if amount > balance:
+        print("Insufficient balance.")
+    else:
+        balance -= amount
+        print(f"₹{amount} withdrawn. New balance: ₹{balance}")
+    return balance
 
-# Play game function
 def play_game(balance):
     if balance <= 0:
-        print("Insufficient balance to play. Please deposit money first.")
+        print("You need to deposit money to play the game.")
         return balance
 
-    mine_positions = random.sample(range(1, 17), 5)  # Place 5 mines randomly
-    c = 0
-    d = random.randint(2, 5)
-    winnings = int(input("Enter bet amount: "))
+    print("Playing the game...")
 
-    if winnings > balance:
+    mine_position = random.randrange(1, 17)  # Mine Position
+
+    bet = int(input("Enter bet amount: "))
+
+    if bet > balance:
         print("You don't have enough balance for this bet. Try again.")
         return balance
-
-    balance -= winnings
+    else:
+        balance -= bet
 
     L = ['⬜', '⬜', '⬜', '⬜']
     P = ['⬜', '⬜', '⬜', '⬜']
@@ -89,16 +74,17 @@ def play_game(balance):
     display_board()
 
     while True:
-        c += 1
-
         while True:
-            y = int(input("Choose a number from 1 to 16: "))
-            if 1 <= y <= 16:
-                break
-            else:
-                print("Please enter a number between 1 and 16.")
+            try:
+                y = int(input("Choose a number from 1 to 16: "))
+                if 1 <= y <= 16:
+                    break
+                else:
+                    print("Please enter a number between 1 and 16.")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
 
-        if y in mine_positions or c > d:
+        if y == mine_position:
             print("Game over! You landed on a mine!")
             if 1 <= y <= 4:
                 L[y - 1] = '💣'
@@ -109,7 +95,9 @@ def play_game(balance):
             elif 13 <= y <= 16:
                 R[y - 13] = '💣'
             display_board()
-            print("You lost", winnings, "! Remaining balance:", balance)
+
+            print(f"You lost {bet}! Remaining balance: {balance}")
+            update_user_balance(name, balance)
             break
         else:
             print("Safe!")
@@ -125,52 +113,48 @@ def play_game(balance):
 
             display_board()
 
-            winnings *= 2
-            print("Winnings =", int(winnings))
+            bet *=2   # Increase bet only if the player survives
+            print(f"Winnings = {int(bet)}")
 
             while True:
-                choice = input("Do you want to continue playing or exit? (continue/exit): ").strip().lower()
+                choice = input("Do you want to continue playing or exit? (continue/exit): ").lower()
                 if choice == "continue":
                     break
                 elif choice == "exit":
-                    balance += winnings
-                    print("You have exited the game with", int(winnings), "added to your balance. Your new balance is", balance)
+                    balance += bet
+                    print(f"You have exited the game with {int(bet)} added to your balance. Your new balance is {balance}")
+                    update_user_balance(name, balance)
                     return balance
                 else:
                     print("Invalid choice. Please type 'continue' or 'exit'.")
 
-    return balance
+name = input("Enter your name: ")
+balance = check_user_balance(name)
+if balance is None:
+    create_user(name)
+    balance = 0
 
-# Main function
-def main():
-    print("Welcome to the Ultimate Minesweeper Game!")
-    name = input("Enter your name: ")
-    balance = get_or_create_player(name)
+while True:
+    print("Choose an option:")
+    print("1. Deposit money")
+    print("2. Withdraw money")
+    print("3. Play the game")
+    print("4. Exit")
 
-    while True:
-        print("Choose an option:")
-        print("1. Deposit money")
-        print("2. Withdraw money")
-        print("3. Play the game")
-        print("4. Exit")
+    choice = input("Enter your choice (1-4): ")
 
-        choice = input("Enter your choice (1-4): ")
+    if choice == '1':
+        balance = deposit(balance)
+        update_user_balance(name, balance)
+    elif choice == '2':
+        balance = withdraw(balance)
+        update_user_balance(name, balance)
+    elif choice == '3':
+        balance = play_game(balance)
+    elif choice == '4':
+        print("Thank you for playing! Goodbye!")
+        break
+    else:
+        print("Invalid choice. Please try again.")
 
-        if choice == '1':
-            balance = deposit(balance)
-            update_balance(name, balance)
-        elif choice == '2':
-            balance = withdraw(balance)
-            update_balance(name, balance)
-        elif choice == '3':
-            balance = play_game(balance)
-            update_balance(name, balance)
-        elif choice == '4':
-            print("Thank you for playing! Goodbye!")
-            update_balance(name, balance)
-            break
-        else:
-            print("Invalid choice. Please try again.")
-
-if __name__ == "__main__":
-    main()
+conn.close()
